@@ -11,13 +11,18 @@ import (
 	"github.com/olekukonko/tablewriter"
 )
 
+type APIResponse[T any] struct {
+	Status string `json:"status"`
+	Result []T    `json:"result"`
+}
+
 type Contest struct {
 	ID               int    `json:"id"`
 	Name             string `json:"name"`
 	StartTimeSeconds int64  `json:"startTimeSeconds`
 }
 
-type Rating struct {
+type RatingHistory struct {
 	ContestID   int    `json:"contestID"`
 	ContestName string `json:"contestName"`
 	Rank        int    `json:"rank"`
@@ -26,32 +31,62 @@ type Rating struct {
 	NewRating   int    `json:"newRating"`
 }
 
-type User struct{}
-
-type Submission struct{}
-type Problem struct{}
-
-type APIResponse[T any] struct {
-	Status string `json:"status"`
-	Result []T    `json:"result"`
+type User struct {
+	Rank      string `json:"rank"`
+	Handle    string `json:"handle"`
+	MaxRating int    `json:"maxRating"`
+	Rating    int    `json:"rating"`
 }
 
+// Following two structs work together
+type Submission struct {
+	ContestID           int     `json:"contestId"`
+	CreationTimeSeconds int64   `json:"creationTimeSeconds"`
+	Problem             Problem `json:"problem"`
+	Verdict             string  `json:"verdict"`
+	ProgrammingLanguage string  `json:"programmingLanguage"`
+}
+
+type Problem struct {
+	Name   string `json:"name"`
+	Index  string `json:"index"`
+	Rating *int   `json:"rating"` // optional (nil if missing)
+}
+
+func PrintUsage() {
+	fmt.Print(`
+Usage: cfetch <--rating <RATING>|--info <INFO>|--contests|--submissions <SUBMISSIONS>>
+
+Options:
+  -r, --rating <RATING>
+  -i, --info <INFO>
+  -c, --contests
+  -s, --submissions <SUBMISSIONS> `)
+	os.Exit(1)
+}
 func main() {
 	args := os.Args
 
-	if len(args) < 1 {
-		fmt.Println("Please provide arguments")
-		return
+	if len(args) < 2 {
+		PrintUsage()
+	}
+
+	flag := args[1]
+
+	if flag != "--contests" && flag != "-c" && len(args) < 3 {
+		PrintUsage()
 	}
 
 	switch args[1] {
-	case "--contests":
+	case "--contests", "-c":
 		PrintContests()
-	case "--rating":
-		PrintRatingHistory(args[2])
-	case "--submissions":
-	case "info":
+	case "--rating", "-r":
 
+		PrintRatingHistory(args[2])
+	case "--submissions", "-s":
+		PrintSubmissionHistory(args[2])
+	case "--info", "-i":
+		PrintUserInfo(args[2])
 	}
 
 }
@@ -102,7 +137,7 @@ func PrintRatingHistory(handle string) {
 	url := fmt.Sprintf("https://codeforces.com/api/user.rating?handle=%s", handle)
 	body := Request(url)
 
-	var apiResp APIResponse[Rating]
+	var apiResp APIResponse[RatingHistory]
 	err := json.Unmarshal(body, &apiResp)
 
 	if err != nil {
@@ -134,5 +169,77 @@ func PrintRatingHistory(handle string) {
 		table.Append(row)
 	}
 	table.Render()
+}
 
+func PrintUserInfo(handle string) {
+	url := fmt.Sprintf("https://codeforces.com/api/user.info?handles=%s&checkHistoricHandles=false", handle)
+	body := Request(url)
+
+	var apiResp APIResponse[User]
+	err := json.Unmarshal(body, &apiResp)
+	if err != nil {
+		fmt.Println("Error unmarshalling:", err)
+		return
+	}
+
+	table := tablewriter.NewWriter(os.Stdout)
+	table.Header([]string{"Handle", "Rank", "Rating", "Max Rating"})
+
+	for _, user := range apiResp.Result {
+		row := []string{
+			user.Handle,
+			user.Rank,
+			fmt.Sprintf("%d", user.Rating),
+			fmt.Sprintf("%d", user.MaxRating),
+		}
+		table.Append(row)
+	}
+
+	table.Render()
+}
+
+func PrintSubmissionHistory(handle string) {
+	url := fmt.Sprintf("https://codeforces.com/api/user.status?handle=%s&from=1&count=10", handle)
+
+	body := Request(url)
+
+	var apiResp APIResponse[Submission]
+
+	err := json.Unmarshal(body, &apiResp)
+	if err != nil {
+		fmt.Println("Error unmarshalling: ", err)
+
+	}
+
+	table := tablewriter.NewTable(os.Stdout)
+	table.Header([]string{
+		"Contest ID",
+		"Difficulty",
+		"Problem Name",
+		"Verdict",
+		"Language",
+		"Time",
+	})
+
+	for _, submission := range apiResp.Result {
+		var difficulty string
+		if submission.Problem.Rating == nil {
+			difficulty = "N/A"
+		} else {
+			difficulty = fmt.Sprintf("%d", submission.Problem.Rating)
+		}
+
+		startTime := time.Unix(submission.CreationTimeSeconds, 0).Local().Format("02 Jan 2006 15:04")
+
+		var row []string = []string{
+			fmt.Sprintf("%d", submission.ContestID),
+			difficulty,
+			submission.Problem.Name,
+			submission.Verdict,
+			submission.ProgrammingLanguage,
+			startTime,
+		}
+		table.Append(row)
+	}
+	table.Render()
 }
