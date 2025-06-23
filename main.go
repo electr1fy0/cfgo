@@ -17,42 +17,66 @@ type Contest struct {
 	StartTimeSeconds int64  `json:"startTimeSeconds`
 }
 
-type APIResponse struct {
-	Status string    `json:"status"`
-	Result []Contest `json:"result"`
+type Rating struct {
+}
+
+type User struct{}
+
+type Submission struct{}
+type Problem struct{}
+
+type APIResponse[T any] struct {
+	Status string `json:"status"`
+	Result []T    `json:"result"`
 }
 
 func main() {
-	url := "https://codeforces.com/api/contest.list?gym=false"
-	res, err := make_request(url)
-	if err != nil {
-		fmt.Println("Error: ", err)
+	args := os.Args
+
+	if len(args) < 1 {
+		fmt.Println("Please provide arguments")
 		return
 	}
+
+	switch args[1] {
+	case "--contests":
+		PrintContests()
+	case "--rating":
+
+	case "--submissions":
+	case "info":
+
+	}
+
+}
+
+func Request(url string) (*http.Response, error) {
+	return http.Get(url)
+}
+
+func PrintContests() {
+	url := "https://codeforces.com/api/contest.list?gym=false"
+	res, err := Request(url)
+	if err != nil {
+		fmt.Println("Error making the request: ", err)
+		os.Exit(1)
+	}
+
 	defer res.Body.Close()
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		fmt.Println("Error reading body: ", err)
-		return
-	}
-	var apiResp APIResponse
-	err = json.Unmarshal(body, &apiResp)
-	if err != nil {
 		fmt.Println("Error parsing JSON: ", err)
 		return
 	}
+	var apiResp APIResponse[Contest]
 
-	// fmt.Print(*res)
-	print_contests(apiResp)
+	err = json.Unmarshal(body, &apiResp)
+	if err != nil {
+		fmt.Println("Error unmarshalling: ", err)
 
-}
+	}
 
-func make_request(url string) (*http.Response, error) {
-	return http.Get(url)
-}
-
-func print_contests(apiResp APIResponse) {
 	table := tablewriter.NewWriter((os.Stdout))
 	table.Header([]string{"Contest ID", "Name", "Start time"})
 
