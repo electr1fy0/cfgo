@@ -1,12 +1,16 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/charmbracelet/fang"
+	"github.com/spf13/cobra"
 
 	"github.com/olekukonko/tablewriter"
 )
@@ -65,28 +69,49 @@ Options:
 	os.Exit(1)
 }
 func main() {
-	args := os.Args
-
-	if len(args) < 2 {
-		PrintUsage()
+	cmd := &cobra.Command{
+		Use:   "cfetch",
+		Short: "Fetch codeforces data from your terminal",
 	}
 
-	flag := args[1]
+	cmd.AddCommand(&cobra.Command{
+		Use:   "contests",
+		Short: "Show latest contests",
+		Run: func(cmd *cobra.Command, args []string) {
+			PrintContests()
+		},
+	})
 
-	if flag != "--contests" && flag != "-c" && len(args) < 3 {
-		PrintUsage()
-	}
+	cmd.AddCommand(&cobra.Command{
+		Use:   "rating [handle]",
+		Short: "Show rating history",
+		Args:  cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			PrintRatingHistory(args[0])
+		},
+	})
 
-	switch args[1] {
-	case "--contests", "-c":
-		PrintContests()
-	case "--rating", "-r":
+	cmd.AddCommand(&cobra.Command{
+		Use:   "info [handle]",
+		Short: "Show user info",
+		Args:  cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			PrintUserInfo(args[0])
+		},
+	})
 
-		PrintRatingHistory(args[2])
-	case "--submissions", "-s":
-		PrintSubmissionHistory(args[2])
-	case "--info", "-i":
-		PrintUserInfo(args[2])
+	cmd.AddCommand(&cobra.Command{
+		Use:   "submissions [handle]",
+		Short: "Show recent submissions",
+		Args:  cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			PrintSubmissionHistory(args[0])
+		},
+	})
+
+	if err := fang.Execute(context.Background(), cmd); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 
 }
