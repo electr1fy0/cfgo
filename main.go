@@ -22,7 +22,7 @@ type APIResponse[T any] struct {
 type Contest struct {
 	ID               int    `json:"id"`
 	Name             string `json:"name"`
-	StartTimeSeconds int64  `json:"startTimeSeconds`
+	StartTimeSeconds int64  `json:"startTimeSeconds"`
 }
 
 type RatingHistory struct {
