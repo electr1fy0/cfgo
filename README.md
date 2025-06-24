@@ -2,11 +2,6 @@
 
 A command-line tool to fetch Codeforces data directly from your terminal.
 
-## Installation
-
-```bash
-# Installation instructions here
-```
 
 ## Usage
 
@@ -49,7 +44,3 @@ cfetch contests
 ## Contributing
 
 Pull requests welcome.
-
-## License
-
-[License here]

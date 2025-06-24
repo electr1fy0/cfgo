@@ -10,9 +10,8 @@ import (
 	"time"
 
 	"github.com/charmbracelet/fang"
-	"github.com/spf13/cobra"
-
 	"github.com/olekukonko/tablewriter"
+	"github.com/spf13/cobra"
 )
 
 type APIResponse[T any] struct {
@@ -57,17 +56,6 @@ type Problem struct {
 	Rating *int   `json:"rating"` // optional (nil if missing)
 }
 
-func PrintUsage() {
-	fmt.Print(`
-Usage: cfetch <--rating <RATING>|--info <INFO>|--contests|--submissions <SUBMISSIONS>>
-
-Options:
-  -r, --rating <RATING>
-  -i, --info <INFO>
-  -c, --contests
-  -s, --submissions <SUBMISSIONS> `)
-	os.Exit(1)
-}
 func main() {
 	cmd := &cobra.Command{
 		Use:   "cfetch",
@@ -236,7 +224,7 @@ func PrintSubmissionHistory(handle string) {
 
 	}
 
-	table := tablewriter.NewTable(os.Stdout)
+	table := tablewriter.NewWriter(os.Stdout)
 	table.Header([]string{
 		"Contest ID",
 		"Difficulty",
